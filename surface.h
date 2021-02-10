@@ -3,6 +3,8 @@
 
 #include <QtDataVisualization/Q3DSurface>
 #include <QtWidgets/QSlider>
+#include <iostream>
+#include <fstream>
 
 using namespace QtDataVisualization;
 
@@ -11,7 +13,7 @@ class MySurfaceGraph : public QObject
     Q_OBJECT
 public:
     explicit MySurfaceGraph(Q3DSurface *surface);
-    void enableSqrtSinModel(QString path);
+    void enableSqrtSinModel(QString path, uint16_t CountIon);
 
     void toggleModeNone() { m_graph->setSelectionMode(QAbstract3DGraph::SelectionNone); }
     void toggleModeItem() { m_graph->setSelectionMode(QAbstract3DGraph::SelectionItem); }
@@ -48,7 +50,8 @@ private:
 
     void setAxisXRange(float min, float max);
     void setAxisZRange(float min, float max);
-    void fillSqrtSinProxy(QString path);
+    void fillSqrtSinProxy(QString path, uint16_t CountIon);
+
 };
 
 #endif // SURFACE_H

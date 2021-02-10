@@ -190,14 +190,17 @@
                   <item>
                    <widget class="QLabel" name="label">
                     <property name="text">
-                     <string>Количество точек на графике:</string>
+                     <string>Отображение ионнограмм:</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QSpinBox" name="spinBox">
+                   <widget class="QSpinBox" name="CountIonSpinBox">
                     <property name="focusPolicy">
-                     <enum>Qt::NoFocus</enum>
+                     <enum>Qt::WheelFocus</enum>
+                    </property>
+                    <property name="frame">
+                     <bool>true</bool>
                     </property>
                     <property name="readOnly">
                      <bool>false</bool>
@@ -209,32 +212,53 @@
                      <enum>QAbstractSpinBox::CorrectToPreviousValue</enum>
                     </property>
                     <property name="keyboardTracking">
-                     <bool>false</bool>
+                     <bool>true</bool>
                     </property>
                     <property name="showGroupSeparator" stdset="0">
-                     <bool>true</bool>
+                     <bool>false</bool>
                     </property>
                     <property name="suffix">
                      <string/>
                     </property>
                     <property name="minimum">
-                     <number>30</number>
+                     <number>10</number>
                     </property>
                     <property name="maximum">
-                     <number>5000</number>
+                     <number>50000</number>
                     </property>
                     <property name="singleStep">
-                     <number>30</number>
+                     <number>10</number>
                     </property>
                     <property name="stepType">
                      <enum>QAbstractSpinBox::DefaultStepType</enum>
                     </property>
                     <property name="value">
-                     <number>300</number>
+                     <number>50</number>
                     </property>
                    </widget>
                   </item>
                  </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_13">
+                <item>
+                 <widget class="QLabel" name="label_2">
+                  <property name="text">
+                   <string>Обновление 3D графика(с):</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="value">
+                   <number>1</number>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>

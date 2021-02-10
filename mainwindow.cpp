@@ -19,22 +19,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(settingClass,SIGNAL(sendText(SerialSetting::Settings)),this, SLOT(openSerialPort(SerialSetting::Settings))); // Создаем свзяь сигнал -> слот
     ChartInit();
     ui->NamePathFolderlabel->setText("D:/DataTerminal/");
-
+    InitSurface();
     timer = new QTimer();
     connect(timer, SIGNAL(timeout()), this, SLOT(slotTimerAlarm()));
     ui->Timerlabel->setText("Время со старта: 0");
-
-    InitSurface();
-
-
-    QFile file("D:/Hello.bin");
-    if (!file.open(QIODevice::ReadWrite))
-        return;
-    QDataStream out(&file);
-    out <<(quint16)5 << "\n";
-
-
-
+    CountIonSpinBox = 50;
 
 }
 
@@ -62,13 +51,19 @@ void MainWindow::on_OffIMSButton_clicked(){
 
 /*============ Функция обработки нажатия на кнопку "Построить 3D график" ==============*/
 void MainWindow::on_Buld3DChartButton_clicked(){
-    BuldSurface(LastPathFile);
+    if(LastPathFile.indexOf(".bin") != -1){
+    BuldSurface(LastPathFile, CountIonSpinBox);
+    }
+    else{
+        QMessageBox::information(this, tr("Ошибка"), "Файл не найден");
+    }
 }
+
 /*============ Функция обработки нажатия на кнопку "Выбрать данные для построения 3D графика" ==============*/
 void MainWindow::on_GetDataForBuld3DChartButton_clicked(){
-    QString Path = QFileDialog::getOpenFileName(this, tr("Open File"), "/D:/" , tr("*.txt"));
-    if(Path.indexOf(".txt")!=-1){
-        BuldSurface(Path);
+    QString Path = QFileDialog::getOpenFileName(this, tr("Open File"), "/D:/" , tr("*.bin"));
+    if(Path.indexOf(".bin")!=-1){
+        BuldSurface(Path, CountIonSpinBox);
     }
 }
 
@@ -81,14 +76,14 @@ void MainWindow::on_startButton_clicked(){
         QDir().mkdir(pathFolder + path2);
     }
     QString name = QDateTime::currentDateTime().toString("hh-mm-ss");
-    QString type = ".txt";
-    IonFile.open((pathFolder + path2 + '/' + name + type).toStdString(), std::ofstream::out | std::ofstream::app);
+    QString type = ".bin";
+
+    IonFile.open((pathFolder + path2 + '/' + name + type).toStdString(), std::ofstream::binary | std::ofstream::app);
+
     LastPathFile = pathFolder + path2 + '/' + name + type;
     qDebug()<<'a';
-
     settingIMSSend();
     timer->start(1000); // И запустим таймер
-
     StateButton(false, false, false, false, false, true, false, false, false, false);
 }
 
@@ -147,6 +142,10 @@ void MainWindow::on_smoothiLineCheckBox_stateChanged(int arg1){
     smoothingLineChart = arg1;
 }
 
+/*============ Функция для проерки Check Box на количество ионограмм ==============*/
+void MainWindow::on_CountIonSpinBox_textChanged(const QString &arg1){
+    CountIonSpinBox = arg1.toInt();
+}
 
 void MainWindow::on_UpdateConnectComButton_clicked(){
     bool result = serialPort.closeSerialPort();
@@ -162,6 +161,11 @@ void MainWindow::on_UpdateConnectComButton_clicked(){
 /*============ Функция обработки Check Box перенос строки ==============*/
 void MainWindow::on_LineBreakCheckBox_stateChanged(int arg1){
     LineBreakCheck = arg1;
+}
+
+/*============ Функция обработки spin Box обнавления графика ==============*/
+void MainWindow::on_spinBox_textChanged(const QString &arg1){
+    SecondUpdate3D = arg1.toInt();
 }
 
 
@@ -192,7 +196,7 @@ void MainWindow::ChartInit(){
 }
 
 /*============ Функция для постройки графика ==============*/
-void MainWindow::ChartInMainMenu(uint16_t len){
+void MainWindow::ChartInMainMenu(){
 
     chart->removeAllSeries(); // удаляем старые линии перед тем как построить новые
 
@@ -202,7 +206,7 @@ void MainWindow::ChartInMainMenu(uint16_t len){
         seriesNew->setOpacity(1.0);
         QPen pen1(Qt::green, 3, Qt::SolidLine);
         seriesNew->setPen(pen1);
-        for (int i = 0; i < (len-7)/2; i++) {
+        for (int i = 0; i < BuffLen; i++) {
             seriesNew->append(i, ionogramIMS.IonogramData[i]);
         }
         chart->addSeries(seriesNew);
@@ -213,7 +217,7 @@ void MainWindow::ChartInMainMenu(uint16_t len){
         QPen pen1(Qt::green, 3, Qt::SolidLine);
         seriesNew->setPen(pen1);
 
-        for (int i = 0; i < (len-7)/2; i++) {
+        for (int i = 0; i < BuffLen; i++) {
             seriesNew->append(i, ionogramIMS.IonogramData[i]);
         }
         chart->addSeries(seriesNew);
@@ -293,6 +297,7 @@ void MainWindow::StateButton(bool SettConn, bool closeCon, bool push, bool clear
 
 /*============ Функция вызывается для обновления графика и записи пришедших данных в Label ==============*/
 void MainWindow::dataProcessing(uint8_t* buff, uint16_t len){
+    qDebug()<<len;
     ui->labelExamSett->setText((ui->labelExamSett->toPlainText()) + *buff);
     /*============ Прием параметров состояния IMS ==============*/
     if(buff[0] == IdConditionIMS){
@@ -306,21 +311,29 @@ void MainWindow::dataProcessing(uint8_t* buff, uint16_t len){
     }
     /*============ Прием данных с выборками IMS ==============*/
     if(buff[0] == IdIonogramIMS){
+        memset(ionogramIMS.IonogramData, 0, sizeof(uint16_t) * BuffLen);
         ionogramIMS.serialNumberIonogram = (buff[4]<<24)|(buff[3]<<16)|(buff[2]<<8)|buff[1];
-        WriteToFile(ionogramIMS.serialNumberIonogram, 1);
         ionogramIMS.serialNumberPackage = (buff[6]<<8)|buff[5];
-        WriteToFile(ionogramIMS.serialNumberPackage, 2);
         int k = 7;
-        for (int i = 0; i<(len-7)/2; i++) {
+        for (int i = 0; i<BuffLen; i++) {
             ionogramIMS.IonogramData[i] = (buff[k+1]<<8)|buff[k];
-            WriteToFile(ionogramIMS.IonogramData[i], 3);
             k+=2;
         }
-        IonFile<<"]\n\n";
-        ChartInMainMenu(len);
+        WriteToFile();
+        ChartInMainMenu();
     }
 }
 
+/*============ Функция для записи вспомогательных символов в файл ==============*/
+void MainWindow::WriteToFile(){
+    char begin = '<';
+    char end = '>';
+    IonFile.put(begin);
+    IonFile.write((char*)&ionogramIMS.serialNumberIonogram, sizeof(ionogramIMS.serialNumberIonogram));
+    IonFile.write((char*)&ionogramIMS.serialNumberPackage, sizeof(ionogramIMS.serialNumberPackage));
+    IonFile.write((char*)ionogramIMS.IonogramData, sizeof(ionogramIMS.IonogramData));
+    IonFile.put(end);
+}
 /*============ Слот для обработки timeout() (таймера) ==============*/
 void MainWindow::slotTimerAlarm(){
     secondsTimer++;
@@ -328,57 +341,6 @@ void MainWindow::slotTimerAlarm(){
     ui->Timerlabel->setText(("Время со старта: ") + second);
 }
 
-/*============ Функция для записи вспомогательных символов в файл ==============*/
-void MainWindow::WriteToFile(uint16_t val, int command){
-    int CountNumber;
-    uint16_t number;
-    char bufNumber[10];
-
-    if(command == 1){
-        CountNumber = 0;
-        number =  val;
-        snprintf(bufNumber, sizeof(bufNumber), "%d", number);
-        CountNumber = 0;
-        while(number){
-            number = number / 10;
-            CountNumber++;
-        }
-        IonFile <<'<';
-        for (int i = 0; i < CountNumber ; i++ )  IonFile<<bufNumber[i];
-    }
-
-    if(command == 2){
-        CountNumber = 0;
-        number =  val;
-        snprintf(bufNumber, sizeof(bufNumber), "%d", number);
-        CountNumber = 0;
-        while(number){
-            number = number / 10;
-            CountNumber++;
-        }
-        IonFile <<' ';
-        for (int i = 0; i < CountNumber ; i++ )  IonFile<<bufNumber[i];
-        IonFile <<">\n[";
-    }
-
-    if(command == 3){
-        CountNumber = 0;
-        number =  val;
-        snprintf(bufNumber, sizeof(bufNumber), "%d", number);
-        CountNumber = 0;
-        while(number){
-            number = number / 10;
-            CountNumber++;
-        }
-        CountNumber =  (CountNumber == 0) ? 1 : CountNumber;
-        for (int i = 0; i < CountNumber ; i++ )  IonFile<<bufNumber[i];
-        IonFile <<" ";
-    }
-
-    if(command == 4){
-        IonFile <<"\n";
-    }
-}
 
 
 /*============ Функция для инициализации осей 3D графика ==============*/
@@ -387,9 +349,13 @@ void MainWindow::InitSurface(){
 }
 
 /*============ Функция для построения 3D графика ==============*/
-void MainWindow::BuldSurface(QString path){
-    modifierSurface->enableSqrtSinModel(path);
+void MainWindow::BuldSurface(QString path , uint16_t CountIon){
+    modifierSurface->enableSqrtSinModel(path, CountIon);
 }
+
+
+
+
 
 
 

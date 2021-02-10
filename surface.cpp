@@ -1,4 +1,5 @@
 #include "surface.h"
+#include "mainwindow.h"
 
 #include <QtDataVisualization/QSurfaceDataProxy>
 #include <QtDataVisualization/QHeightMapSurfaceDataProxy>
@@ -11,7 +12,7 @@
 #include <QElapsedTimer>
 
 
-const int sampleCountX = 2001;
+const int sampleCountX = BuffLen;
 const int sampleCountZ = 1000000;
 //const float sampleMin = 0.0f;
 //const float sampleMax = 1000000.0f;
@@ -26,78 +27,60 @@ MySurfaceGraph::MySurfaceGraph(Q3DSurface *surface) : m_graph(surface){
 }
 
 
-void MySurfaceGraph::fillSqrtSinProxy(QString path){
-    //    float stepX = (sampleMax - sampleMin) / float(sampleCountX - 1);
-    //    float stepZ = (sampleMax - sampleMin) / float(sampleCountZ - 1);
+void MySurfaceGraph::fillSqrtSinProxy(QString path, uint16_t CountIon){
+
     QSurfaceDataArray *dataArray = new QSurfaceDataArray;
     dataArray->reserve(sampleCountZ);
-
-
     float x = 0, y = 0, z = 0;
-    QFile file(path);
-    QString data = "";
-    QStringList list;
+    std::ifstream file;
+    file.open(path.toStdString(), std::ifstream::binary | std::ifstream::in| std::ifstream::ate);
+    MainWindow::IonogramIMS structIMS;
+    uint32_t sizeFile = file.tellg();
+    uint32_t sizeStruct = sizeof(structIMS.serialNumberIonogram) + sizeof(structIMS.serialNumberPackage) + sizeof(structIMS.IonogramData) + sizeof('<') + sizeof('>');
+    uint32_t countStruct = sizeFile / sizeStruct;
+    int32_t BegIndex = countStruct - CountIon;
+    if(BegIndex<0) BegIndex = 0;
+    qDebug()<< "Size file - " <<sizeFile;
+    qDebug()<< "Size struct - "<<sizeStruct;
+    qDebug()<< "Count struct in file  - "<<countStruct;
+    file.seekg (BegIndex * sizeStruct, file.beg);
 
-
-    int p = 0;
-    int32_t CountLineBefor = 0;
-    int32_t CountLineAfter = 0;
-
-
-        QElapsedTimer timer;
-        timer.start();
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
-    while(!file.atEnd()){
-        file.readLine();
-        CountLineBefor++;
-    }
-            qDebug() << "До закрытия " << timer.elapsed() << "milliseconds";
-    file.close();
-            qDebug() << "После закрытия " << timer.elapsed() << "milliseconds";
-            timer.start();
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
-
-    qDebug()<<CountLineBefor;
-    while(!file.atEnd())
-    {
-        data = file.readLine();
-        CountLineAfter++;
-        if(CountLineAfter>CountLineBefor - 1000){
-            if(data.indexOf('<')!=-1){
-                data.remove('<');
-                data.remove('>');
-                list = data.split(QRegExp("\\s+"));
-                //            uint16_t Ionogram = list[0].toInt();
-                //            uint16_t Package = list[1].toInt();
-                z = p++;
+    while(!file.eof()){
+        char begin = 0;
+        char end = 0;
+        begin = file.get();
+        if (begin == '<')
+        {
+            file.read((char*)&structIMS.serialNumberIonogram, sizeof(structIMS.serialNumberIonogram));
+            file.read((char*)&structIMS.serialNumberPackage, sizeof(structIMS.serialNumberPackage));
+            file.read((char*)&structIMS.IonogramData, sizeof(structIMS.IonogramData));
+            file.get(end);
+            if(!(end == '>')) {
+                qDebug() << "Error Read File";
             }
-            if(data.indexOf('[')!=-1 && data.indexOf(']')!=-1){
-                QSurfaceDataRow *newRow = new QSurfaceDataRow(sampleCountX);
-                data.remove('[');
-                data.remove(']');
-                list = data.split(QRegExp("\\s+"));
-                uint16_t index = 0;
-                for(int i = 0; i<list.count(); i++){
-                    x = i;
-                    y = list[i].toUInt();
-                    (*newRow)[index++].setPosition(QVector3D(x, y, z));
-                }
-                while(list.count()<2000){
-                    x = index;
-                    y = 0;
-                    (*newRow)[index++].setPosition(QVector3D(x, y, z));
-                }
-                *dataArray << newRow;
-                qDebug()<<dataArray->count();
+
+            QSurfaceDataRow *newRow = new QSurfaceDataRow(sampleCountX);
+            z = structIMS.serialNumberIonogram;
+            int16_t index = 0;
+            for(int i = 0; i<BuffLen; i++){
+                x = i;
+                y = structIMS.IonogramData[i];
+                (*newRow)[index++].setPosition(QVector3D(x, y, z));
             }
+            *dataArray << newRow;
         }
     }
+    file.close();
     m_sqrtSinProxy->resetArray(dataArray);
-    qDebug() << "После записи " << timer.elapsed() << "milliseconds";
 }
 
 
-void MySurfaceGraph::enableSqrtSinModel(QString path){
+
+
+
+
+
+void MySurfaceGraph::enableSqrtSinModel(QString path, uint16_t CountIon){
     m_sqrtSinSeries->setDrawMode(QSurface3DSeries::DrawSurface);
     m_sqrtSinSeries->setFlatShadingEnabled(false);
     m_graph->axisX()->setLabelFormat("%.2f");
@@ -107,7 +90,7 @@ void MySurfaceGraph::enableSqrtSinModel(QString path){
     m_graph->axisZ()->setLabelAutoRotation(90);
     m_graph->removeSeries(m_sqrtSinSeries);
 
-    fillSqrtSinProxy(path);
+    fillSqrtSinProxy(path, CountIon);
     m_graph->addSeries(m_sqrtSinSeries);
 
     //        m_rangeMinX = sampleMin;

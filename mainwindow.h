@@ -41,7 +41,7 @@
 #include <QtDataVisualization/Q3DSurface>
 using namespace QtDataVisualization;
 
-
+#define BuffLen 2000
 
 QT_CHARTS_USE_NAMESPACE
 
@@ -54,17 +54,17 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    #define BuffLen 2000
+
 
     explicit MainWindow(QWidget *parent = 0);
     void closeSerialPort();
-    void ChartInMainMenu(uint16_t len);
+    void ChartInMainMenu();
     void settingIMSSend();
     void DefaultValueSettingIMS();
     void StateButton(bool SettConn, bool closeCon, bool push, bool clear, bool start, bool stop, bool Update, bool OnIMS, bool OffIMS, bool NameFolder);
     void ChartInit();
-    void WriteToFile(uint16_t val, int command);
-    void BuldSurface(QString path);
+    void WriteToFile();
+    void BuldSurface(QString path, uint16_t CountIon);
     void InitSurface();
     int countLenBuf = 0;
 
@@ -132,8 +132,10 @@ private slots:
     void on_stopButton_clicked();
     void on_NamePathFolderButton_clicked();
     void on_Buld3DChartButton_clicked();
-
     void on_GetDataForBuld3DChartButton_clicked();
+    void on_CountIonSpinBox_textChanged(const QString &arg1);
+
+    void on_spinBox_textChanged(const QString &arg1);
 
 private:
     Ui::MainWindow *ui;
@@ -158,6 +160,8 @@ private:
 
     QString LastPathFile;
 
+    uint16_t CountIonSpinBox;
+    int SecondUpdate3D = 1;
 
     Q3DSurface *graphSurface = new Q3DSurface();
     MySurfaceGraph *modifierSurface = new MySurfaceGraph(graphSurface);
