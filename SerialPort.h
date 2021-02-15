@@ -11,11 +11,11 @@
 
 
 class SerialPort : public QSerialPort{
-Q_OBJECT
-public:
+    Q_OBJECT
 
-explicit SerialPort();
-void RxBufV(uint8_t* buff, uint16_t len); // Функция вызывает emit - синал и передает данные которые уже обработаны
+public:
+    explicit SerialPort();
+    void RxBufV(uint8_t* buff, uint16_t len); // Функция вызывает emit - синал и передает данные которые уже обработаны
 
 signals:
     void RxBuf(uint8_t* buff, uint16_t len); // Сигнал который передает буфер с данными и его длину

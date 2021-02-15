@@ -13,7 +13,7 @@ class MySurfaceGraph : public QObject
     Q_OBJECT
 public:
     explicit MySurfaceGraph(Q3DSurface *surface);
-    void enableSqrtSinModel(QString path, uint16_t CountIon);
+
 
     void toggleModeNone() { m_graph->setSelectionMode(QAbstract3DGraph::SelectionNone); }
     void toggleModeItem() { m_graph->setSelectionMode(QAbstract3DGraph::SelectionItem); }
@@ -33,6 +33,12 @@ public:
     void adjustZMin(int min);
     void adjustZMax(int max);
 
+signals:
+    void StationButton(bool GetData);
+
+public slots:
+    void EnableGraphSurface(QString path, uint16_t CountIon);
+
 private:
     Q3DSurface *m_graph;
     QSurfaceDataProxy *m_sqrtSinProxy;
@@ -50,7 +56,7 @@ private:
 
     void setAxisXRange(float min, float max);
     void setAxisZRange(float min, float max);
-    void fillSqrtSinProxy(QString path, uint16_t CountIon);
+    void SurfaceGraphProxy(QString path, quint16 CountIon);
 
 };
 

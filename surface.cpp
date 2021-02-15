@@ -27,60 +27,58 @@ MySurfaceGraph::MySurfaceGraph(Q3DSurface *surface) : m_graph(surface){
 }
 
 
-void MySurfaceGraph::fillSqrtSinProxy(QString path, uint16_t CountIon){
-
+void MySurfaceGraph::SurfaceGraphProxy(QString path, quint16 CountIon){
     QSurfaceDataArray *dataArray = new QSurfaceDataArray;
     dataArray->reserve(sampleCountZ);
     float x = 0, y = 0, z = 0;
     std::ifstream file;
     file.open(path.toStdString(), std::ifstream::binary | std::ifstream::in| std::ifstream::ate);
-    MainWindow::IonogramIMS structIMS;
-    uint32_t sizeFile = file.tellg();
-    uint32_t sizeStruct = sizeof(structIMS.serialNumberIonogram) + sizeof(structIMS.serialNumberPackage) + sizeof(structIMS.IonogramData) + sizeof('<') + sizeof('>');
-    uint32_t countStruct = sizeFile / sizeStruct;
-    int32_t BegIndex = countStruct - CountIon;
-    if(BegIndex<0) BegIndex = 0;
-    qDebug()<< "Size file - " <<sizeFile;
-    qDebug()<< "Size struct - "<<sizeStruct;
-    qDebug()<< "Count struct in file  - "<<countStruct;
-    file.seekg (BegIndex * sizeStruct, file.beg);
-
-    while(!file.eof()){
-        char begin = 0;
-        char end = 0;
-        begin = file.get();
-        if (begin == '<')
-        {
-            file.read((char*)&structIMS.serialNumberIonogram, sizeof(structIMS.serialNumberIonogram));
-            file.read((char*)&structIMS.serialNumberPackage, sizeof(structIMS.serialNumberPackage));
-            file.read((char*)&structIMS.IonogramData, sizeof(structIMS.IonogramData));
-            file.get(end);
-            if(!(end == '>')) {
-                qDebug() << "Error Read File";
-            }
-
-            QSurfaceDataRow *newRow = new QSurfaceDataRow(sampleCountX);
-            z = structIMS.serialNumberIonogram;
-            int16_t index = 0;
-            for(int i = 0; i<BuffLen; i++){
-                x = i;
-                y = structIMS.IonogramData[i];
-                (*newRow)[index++].setPosition(QVector3D(x, y, z));
-            }
-            *dataArray << newRow;
+    if(file.is_open()){
+        MainWindow::IonogramIMS structIMS;
+        uint32_t sizeFile = file.tellg();
+        uint32_t sizeStruct = sizeof(structIMS.serialNumberIonogram) + sizeof(structIMS.serialNumberPackage) + sizeof(structIMS.IonogramData) + sizeof('<') + sizeof('>');
+        uint32_t countStruct = sizeFile / sizeStruct;
+        int32_t BegIndex = countStruct - CountIon;
+        if(BegIndex<0){
+            BegIndex = 0;
         }
+        qDebug()<< "BegIndex - " <<BegIndex;
+        qDebug()<< "Size file - " <<sizeFile;
+        qDebug()<< "Size struct - "<<sizeStruct;
+        qDebug()<< "Count struct in file  - "<<countStruct;
+        file.seekg(BegIndex * sizeStruct, file.beg);
+
+        while(!file.eof()){
+            char begin = 0;
+            char end = 0;
+            begin = file.get();
+            if (begin == '<')
+            {
+                file.read((char*)&structIMS.serialNumberIonogram, sizeof(structIMS.serialNumberIonogram));
+                file.read((char*)&structIMS.serialNumberPackage, sizeof(structIMS.serialNumberPackage));
+                file.read((char*)&structIMS.IonogramData, sizeof(structIMS.IonogramData));
+                file.get(end);
+//                if(!(end == '>')) {
+//                    qDebug() << "Error Find '>' ";
+//                }
+
+                QSurfaceDataRow *newRow = new QSurfaceDataRow(sampleCountX);
+                z = structIMS.serialNumberIonogram;
+                int16_t index = 0;
+                for(int i = 0; i<BuffLen; i++){
+                    x = i;
+                    y = structIMS.IonogramData[i];
+                    (*newRow)[index++].setPosition(QVector3D(x, y, z));
+                }
+                *dataArray << newRow;
+            }
+        }
+        file.close();
+        m_sqrtSinProxy->resetArray(dataArray);
     }
-    file.close();
-    m_sqrtSinProxy->resetArray(dataArray);
 }
 
-
-
-
-
-
-
-void MySurfaceGraph::enableSqrtSinModel(QString path, uint16_t CountIon){
+void MySurfaceGraph::EnableGraphSurface(QString path, quint16 CountIon){
     m_sqrtSinSeries->setDrawMode(QSurface3DSeries::DrawSurface);
     m_sqrtSinSeries->setFlatShadingEnabled(false);
     m_graph->axisX()->setLabelFormat("%.2f");
@@ -88,24 +86,12 @@ void MySurfaceGraph::enableSqrtSinModel(QString path, uint16_t CountIon){
     m_graph->axisX()->setLabelAutoRotation(90);
     m_graph->axisY()->setLabelAutoRotation(90);
     m_graph->axisZ()->setLabelAutoRotation(90);
-    m_graph->removeSeries(m_sqrtSinSeries);
-
-    fillSqrtSinProxy(path, CountIon);
-    m_graph->addSeries(m_sqrtSinSeries);
-
-    //        m_rangeMinX = sampleMin;
-    //        m_rangeMinZ = sampleMin;
-    //        m_stepX = (sampleMax - sampleMin) / float(sampleCountX - 1);
-    //        m_stepZ = (sampleMax - sampleMin) / float(sampleCountZ - 1);
-    //        m_axisMinSliderX->setMaximum(sampleCountX - 2);
-    //        m_axisMinSliderX->setValue(0);
-    //        m_axisMaxSliderX->setMaximum(sampleCountX - 1);
-    //        m_axisMaxSliderX->setValue(sampleCountX - 1);
-    //        m_axisMinSliderZ->setMaximum(sampleCountZ - 2);
-    //        m_axisMinSliderZ->setValue(0);
-    //        m_axisMaxSliderZ->setMaximum(sampleCountZ - 1);
-    //        m_axisMaxSliderZ->setValue(sampleCountZ - 1);
-
+    if(!(CountIon == 0)){
+        SurfaceGraphProxy(path, CountIon);
+        m_graph->removeSeries(m_sqrtSinSeries);
+        m_graph->addSeries(m_sqrtSinSeries);
+        emit StationButton(true);
+    }
 }
 
 

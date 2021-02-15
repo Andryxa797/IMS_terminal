@@ -27,8 +27,6 @@
 #include "DataLinKLayer.h"
 #include "SerialPort.h"
 #include "surface.h"
-
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -36,17 +34,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <QDateTime>
-
-
+#include <QThread>
 #include <QtDataVisualization/Q3DSurface>
+QT_CHARTS_USE_NAMESPACE
 using namespace QtDataVisualization;
 
+
+
+/*======== Длина буфера для приема 1 ионограммы ===============*/
 #define BuffLen 2000
 
-QT_CHARTS_USE_NAMESPACE
 
-
-// BitMap
 
 namespace Ui {  class MainWindow; }
 
@@ -54,20 +52,16 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-
-
     explicit MainWindow(QWidget *parent = 0);
     void closeSerialPort();
     void ChartInMainMenu();
     void settingIMSSend();
     void DefaultValueSettingIMS();
-    void StateButton(bool SettConn, bool closeCon, bool push, bool clear, bool start, bool stop, bool Update, bool OnIMS, bool OffIMS, bool NameFolder);
+    void StateButton(bool SettConn, bool closeCon, bool start, bool stop, bool Update, bool OnIMS, bool OffIMS, bool NameFolder);
     void ChartInit();
     void WriteToFile();
-    void BuldSurface(QString path, uint16_t CountIon);
     void InitSurface();
-    int countLenBuf = 0;
-
+    void BuldSurface(QString path, quint16 CountIon); // Сигнал для построения 3D графика
 
 /*==================== Перечень и структура пакетов, отправляемых из ПЭВМ ===========================================*/
 const uint8_t IdOnIMS = 0x01; //  По этой команде включается высоковольтная часть IMS
@@ -111,69 +105,58 @@ struct ConditionIMS{
 };
 
 /*============ Создаем слот для открытия порта ==============*/
+//signals:
+    //void BuldSurface(QString path, quint16 CountIon); // Сигнал для построения 3D графика
+
 public slots:
     void openSerialPort(SerialSetting::Settings curset); // Слот для приема структуры данных из класса Настройка
-    void dataProcessing(uint8_t* buff, uint16_t len);
-    void slotTimerAlarm();
+    void dataProcessing(uint8_t* buff); // Слот для обработки полученных данных
+    void slotTimerAlarm(); // Слот для обработки таймера
+    void Button3Dchart(bool GetData);
 
 
 
 private slots:
-    void on_settingConnButton_clicked(); // Слот по обработке кнопки " Настройки соединения"
-    void on_closeConButton_clicked(); // Слот по обработке кнопки "Разьедениться"
-    void on_pushButton_clicked(); // Слот по обработке кнопки "Отправка"
-    void on_clearButtn_clicked(); // Слот по обработке кнопки "Очистка полей"
-    void on_startButton_clicked(); // Слот по обработке кнопки "Старт"
-    void on_smoothiLineCheckBox_stateChanged(int arg1);
-    void on_UpdateConnectComButton_clicked();
-    void on_LineBreakCheckBox_stateChanged(int arg1);
-    void on_OnIMSButton_clicked();
-    void on_OffIMSButton_clicked();
-    void on_stopButton_clicked();
-    void on_NamePathFolderButton_clicked();
-    void on_Buld3DChartButton_clicked();
-    void on_GetDataForBuld3DChartButton_clicked();
-    void on_CountIonSpinBox_textChanged(const QString &arg1);
-
-    void on_spinBox_textChanged(const QString &arg1);
+    void on_settingConnButton_clicked(); // Слот обработки нажатия кнопки "Настройки соединения"
+    void on_closeConButton_clicked(); // Слот обработки нажатия кнопки"Разьедениться"
+    void on_smoothiLineCheckBox_stateChanged(int arg1); // Слот по обработке Check Box "Сглаживать ли углы?"
+    void on_UpdateConnectComButton_clicked(); // Слот обработки нажатия кнопки "Переподключиться"
+    void on_OnIMSButton_clicked();// Слот обработки нажатия кнопки "Включить IMS"
+    void on_OffIMSButton_clicked(); // Слот обработки нажатия кнопки"Выключить IMS"
+    void on_startButton_clicked(); // Слот обработки нажатия кнопки "Старт"
+    void on_stopButton_clicked(); // Слот обработки нажатия кнопки "Стоп"
+    void on_NamePathFolderButton_clicked(); // Слот обработки нажатия кнопки "Выбрать папку для хранения данных"
+    void on_GetDataForBuld3DChartButton_clicked(); // Слот обработки нажатия кнопки "Выбрать данные для построения"
+    void on_CountIonSpinBox_textChanged(const QString &arg1); // Слот по обработке Spin Box "Отображение ионнограмм:"
+    void on_spinBox_textChanged(const QString &arg1); // Слот по обработке Spin Box "Обновление 3D графика(с):"
+    void on_EnableChartcheckBox_stateChanged(int arg1); // Слот по обработке Check Box "Заблокировать изображение на графике"
+    void on_AutoUpdate3DchartCheckBox_stateChanged(int arg1);
+    void AutoBuld3DChart();
 
 private:
     Ui::MainWindow *ui;
-
-    QGridLayout *gridLayout;
+    uint SecondUpdate3D = 1;
     bool smoothingLineChart = false;
-
+    bool ChartDisable = false;
+    bool AutoUpdate3Dchart = false;
     SerialSetting *settingClass = new SerialSetting;
-    bool LineBreakCheck = false;
-
     QChart *chart = new QChart();
-
     SettingIMS settingIMS;
     IonogramIMS ionogramIMS;
     ConditionIMS conditionIMS;
-
     std::ofstream IonFile;
-
     QTimer *timer;
+    QTimer *AutoBuldTimer = new QTimer;
     quint16 secondsTimer = 0;
     quint16 minutsTimer = 0;
-
     QString LastPathFile;
-
     uint16_t CountIonSpinBox;
-    int SecondUpdate3D = 1;
-
     Q3DSurface *graphSurface = new Q3DSurface();
     MySurfaceGraph *modifierSurface = new MySurfaceGraph(graphSurface);
     QWidget *containerSurface = QWidget::createWindowContainer(graphSurface);
-
+    uint ContErrorFindFile = 0;
 
 };
-
-
-
-
-
 
 
 #endif // MAINWINDOW_H

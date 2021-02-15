@@ -13,18 +13,24 @@ extern TT_DataLinkLayerPoint<4008,20> ttDataLinkLayerPoint;
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
-    StateButton(true, false, false, false, false, false, false, false, false, false);
+    StateButton(true, false, false, false, false, false, false, false);
     DefaultValueSettingIMS();
     connect(&serialPort, &SerialPort::RxBuf, this, &MainWindow::dataProcessing);
     connect(settingClass,SIGNAL(sendText(SerialSetting::Settings)),this, SLOT(openSerialPort(SerialSetting::Settings))); // Создаем свзяь сигнал -> слот
     ChartInit();
     ui->NamePathFolderlabel->setText("D:/DataTerminal/");
-    InitSurface();
     timer = new QTimer();
     connect(timer, SIGNAL(timeout()), this, SLOT(slotTimerAlarm()));
+    connect(AutoBuldTimer, SIGNAL(timeout()), this, SLOT(AutoBuld3DChart()));
+    connect(modifierSurface, SIGNAL(StationButton), this, SLOT(Button3Dchart));
     ui->Timerlabel->setText("Время со старта: 0");
-    CountIonSpinBox = 50;
+    CountIonSpinBox = 500;
 
+    InitSurface();
+    modifierSurface->EnableGraphSurface(" ", 0);
+
+    ui->EnableChartcheckBox->setChecked(true);
+    ui->EnableChartcheckBox->setEnabled(false);
 }
 
 /*===================================================== Обработка нажатий на кнопки ==============================================*/
@@ -39,52 +45,79 @@ void MainWindow::on_settingConnButton_clicked(){
 /*============ Функция обработки нажатия на кнопку "Включить IMS" ==============*/
 void MainWindow::on_OnIMSButton_clicked(){
     ttDataLinkLayerPoint.Send(IdOnIMS);
-    StateButton(false, true, true, false, true, false, true, false, true, true);
+    StateButton(false, true, true, false, true, false, true, true);
 }
 
 /*============ Функция обработки нажатия на кнопку "Выключить IMS" ==============*/
 void MainWindow::on_OffIMSButton_clicked(){
     ttDataLinkLayerPoint.Send(IdOffIMS);
-    StateButton(false, true, true, true, false, false, true, true, false, true);
+    StateButton(false, true, false, false, true, true, false, true);
 }
 
 
 /*============ Функция обработки нажатия на кнопку "Построить 3D график" ==============*/
-void MainWindow::on_Buld3DChartButton_clicked(){
+void MainWindow::AutoBuld3DChart(){
     if(LastPathFile.indexOf(".bin") != -1){
-    BuldSurface(LastPathFile, CountIonSpinBox);
+        AutoBuldTimer->stop();
+        Button3Dchart(false);
+        BuldSurface(LastPathFile, CountIonSpinBox);
+        ContErrorFindFile = 0;
     }
     else{
+        ContErrorFindFile++;
+        if(ContErrorFindFile > 0){
+            AutoBuldTimer->stop();
+            ui->AutoUpdate3DchartCheckBox->setChecked(false);
+        }
         QMessageBox::information(this, tr("Ошибка"), "Файл не найден");
     }
+
 }
 
 /*============ Функция обработки нажатия на кнопку "Выбрать данные для построения 3D графика" ==============*/
 void MainWindow::on_GetDataForBuld3DChartButton_clicked(){
     QString Path = QFileDialog::getOpenFileName(this, tr("Open File"), "/D:/" , tr("*.bin"));
     if(Path.indexOf(".bin")!=-1){
+        Button3Dchart(false);
         BuldSurface(Path, CountIonSpinBox);
     }
+
 }
+
+void MainWindow::on_AutoUpdate3DchartCheckBox_stateChanged(int arg1){
+    AutoUpdate3Dchart = arg1;
+    if(AutoUpdate3Dchart){
+        AutoBuldTimer->start(SecondUpdate3D * 1000);
+    }
+    else{
+        AutoBuldTimer->stop();
+        ui->GetDataForBuld3DChartButton->setEnabled(true);
+    }
+}
+
 
 /*============ Функция обработки нажатия на кнопку "Старт" ==============*/
 void MainWindow::on_startButton_clicked(){
     /*============ Отправка настроек для IMS ==============*/
     QString path2 = (QDateTime::currentDateTime().toString("yyyy-MM-dd"));
     QString pathFolder = ui->NamePathFolderlabel->text();
+    if(pathFolder.indexOf("//") != -1){
+        uint16_t pos = pathFolder.indexOf("//");
+        pathFolder.remove(pos,1);
+    }
     if(!QDir(pathFolder + path2).exists()){
+        QDir().mkdir(pathFolder);
         QDir().mkdir(pathFolder + path2);
     }
     QString name = QDateTime::currentDateTime().toString("hh-mm-ss");
     QString type = ".bin";
-
     IonFile.open((pathFolder + path2 + '/' + name + type).toStdString(), std::ofstream::binary | std::ofstream::app);
-
     LastPathFile = pathFolder + path2 + '/' + name + type;
-    qDebug()<<'a';
     settingIMSSend();
     timer->start(1000); // И запустим таймер
-    StateButton(false, false, false, false, false, true, false, false, false, false);
+    StateButton(false, false, false, true, false, false, false, false);
+    ui->EnableChartcheckBox->setEnabled(true);
+    ui->EnableChartcheckBox->setChecked(false);
 }
 
 /*============ Функция обработки нажатия на кнопку "Выбрать папку для хранения" ==============*/
@@ -98,41 +131,26 @@ void MainWindow::on_NamePathFolderButton_clicked(){
 void MainWindow::on_stopButton_clicked(){
     ttDataLinkLayerPoint.Send(IdStopIMS);
     IonFile.close();
-    StateButton(false, true, true, false, true, false, true, false, true, true);
+    StateButton(false, true, true, false, true, false, true, true);
     timer->stop(); // И запустим таймер
     secondsTimer = 0;
+    ui->EnableChartcheckBox->setChecked(true);
+    ui->EnableChartcheckBox->setEnabled(false);
 }
 
-/*============ Функция обработки нажатия на кнопку "Отправка" ==============*/
-void MainWindow::on_pushButton_clicked(){
-    /*============ Предача написанной строки из поля LineEdit  ==============*/
-    ui->sendlabel->setText((ui->sendlabel->toPlainText()) + ui->sendlineEdit->text());
-    serialPort.MyWriteData(ui->sendlineEdit->text().toUtf8());
-    if(LineBreakCheck){
-        ui->sendlabel->setText((ui->sendlabel->toPlainText()) +"\r");
-        serialPort.MyWriteData("\r\n");
-    }
-
+void MainWindow::on_EnableChartcheckBox_stateChanged(int arg1){
+    ChartDisable = arg1;
 }
-
-
-/*============ Функция обработки нажатия на кнопку "Очистить поля" ==============*/
-void MainWindow::on_clearButtn_clicked(){
-    /*============ Очистка полей приема и отправки данных  ==============*/
-    ui->sendlabel->setText(" ");
-    ui->labelExamSett->setText(" ");
-}
-
 
 /*============ Функция обработки нажатия на кнопку "Разьединить" ==============*/
 void MainWindow::on_closeConButton_clicked(){
     /*============ COM порт будет отключен по нажатию кнопки ==============*/
     bool result = serialPort.closeSerialPort();
     if(result){
-        StateButton(true, false, false, false, false, false, false, false, false, false);
+        StateButton(true, false, false, false, false, false, false, false);
         ui->statusBar->showMessage(tr("Подключений нет"));
     }else{
-        StateButton(false, true, true, true, false, false, true, true, false, true);
+        StateButton(false, true,  false, false, true, true, false, true);
     }
 
 }
@@ -148,20 +166,10 @@ void MainWindow::on_CountIonSpinBox_textChanged(const QString &arg1){
 }
 
 void MainWindow::on_UpdateConnectComButton_clicked(){
-    bool result = serialPort.closeSerialPort();
-    if(result){
-        StateButton(true, false, false, false, false, false, false, false, false, false);
-
-    }else{
-        StateButton(false, true, true, true, true, true, true, true, true, true);
-    }
+    serialPort.closeSerialPort();
     openSerialPort(settingClass->currentSettings);
 }
 
-/*============ Функция обработки Check Box перенос строки ==============*/
-void MainWindow::on_LineBreakCheckBox_stateChanged(int arg1){
-    LineBreakCheck = arg1;
-}
 
 /*============ Функция обработки spin Box обнавления графика ==============*/
 void MainWindow::on_spinBox_textChanged(const QString &arg1){
@@ -178,7 +186,7 @@ void MainWindow::openSerialPort(SerialSetting::Settings p)
     bool result = serialPort.openSerialPort(p);
     if(result){
         ui->statusBar->showMessage(tr("Подключен к %1 : %2, %3, %4, %5, %6").arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits).arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl));
-        StateButton(false, true, true, true, false, false, true, true, false, true);
+        StateButton(false, true, false, false, true, true, false, true);
     }
     else {
         QMessageBox::critical(this, tr("Ошибка"), "Отказано в доступе");
@@ -198,33 +206,33 @@ void MainWindow::ChartInit(){
 /*============ Функция для постройки графика ==============*/
 void MainWindow::ChartInMainMenu(){
 
-    chart->removeAllSeries(); // удаляем старые линии перед тем как построить новые
-
-    /*============ Проверяется условие, нужно ли сглаживать углы на графике? ==============*/
-    if(!smoothingLineChart){
-        QLineSeries *seriesNew = new QLineSeries;
-        seriesNew->setOpacity(1.0);
-        QPen pen1(Qt::green, 3, Qt::SolidLine);
-        seriesNew->setPen(pen1);
-        for (int i = 0; i < BuffLen; i++) {
-            seriesNew->append(i, ionogramIMS.IonogramData[i]);
+    if(!ChartDisable){
+        chart->removeAllSeries(); // удаляем старые линии перед тем как построить новые
+        /*============ Проверяется условие, нужно ли сглаживать углы на графике? ==============*/
+        if(!smoothingLineChart){
+            QLineSeries *seriesNew = new QLineSeries;
+            seriesNew->setOpacity(1.0);
+            QPen pen1(Qt::green, 3, Qt::SolidLine);
+            seriesNew->setPen(pen1);
+            for (int i = 0; i < BuffLen; i++) {
+                seriesNew->append(i, ionogramIMS.IonogramData[i]);
+            }
+            chart->addSeries(seriesNew);
         }
-        chart->addSeries(seriesNew);
-    }
-    else{
-        QSplineSeries *seriesNew = new QSplineSeries(chart);
-        seriesNew->setOpacity(1.0);
-        QPen pen1(Qt::green, 3, Qt::SolidLine);
-        seriesNew->setPen(pen1);
+        else{
+            QSplineSeries *seriesNew = new QSplineSeries(chart);
+            seriesNew->setOpacity(1.0);
+            QPen pen1(Qt::green, 3, Qt::SolidLine);
+            seriesNew->setPen(pen1);
 
-        for (int i = 0; i < BuffLen; i++) {
-            seriesNew->append(i, ionogramIMS.IonogramData[i]);
+            for (int i = 0; i < BuffLen; i++) {
+                seriesNew->append(i, ionogramIMS.IonogramData[i]);
+            }
+            chart->addSeries(seriesNew);
+
         }
-        chart->addSeries(seriesNew);
-
+        chart->createDefaultAxes();
     }
-    chart->createDefaultAxes();
-
 
 }
 /*============ Функция для отправки параметром в IMS ==============*/
@@ -280,12 +288,10 @@ void MainWindow::DefaultValueSettingIMS(){
 
 
 /*============ Функция состояния кнопок  ==============*/
-void MainWindow::StateButton(bool SettConn, bool closeCon, bool push, bool clear, bool start, bool stop, bool Update, bool OnIMS, bool OffIMS, bool NameFolder){
+void MainWindow::StateButton(bool SettConn, bool closeCon, bool start, bool stop, bool Update, bool OnIMS, bool OffIMS, bool NameFolder){
     /*============ ЗЗначение True разрешает нажатие на кнопку, False запрещает ==============*/
     ui->settingConnButton->setEnabled(SettConn);
     ui->closeConButton->setEnabled(closeCon);
-    ui->pushButton->setEnabled(push);
-    ui->clearButtn->setEnabled(clear);
     ui->startButton->setEnabled(start);
     ui->stopButton->setEnabled(stop);
     ui->UpdateConnectComButton->setEnabled(Update);
@@ -296,9 +302,8 @@ void MainWindow::StateButton(bool SettConn, bool closeCon, bool push, bool clear
 
 
 /*============ Функция вызывается для обновления графика и записи пришедших данных в Label ==============*/
-void MainWindow::dataProcessing(uint8_t* buff, uint16_t len){
-    qDebug()<<len;
-    ui->labelExamSett->setText((ui->labelExamSett->toPlainText()) + *buff);
+void MainWindow::dataProcessing(uint8_t* buff){
+    // ui->labelExamSett->setText((ui->labelExamSett->toPlainText()) + *buff);
     /*============ Прием параметров состояния IMS ==============*/
     if(buff[0] == IdConditionIMS){
         conditionIMS.faultCode = buff[1];
@@ -334,6 +339,7 @@ void MainWindow::WriteToFile(){
     IonFile.write((char*)ionogramIMS.IonogramData, sizeof(ionogramIMS.IonogramData));
     IonFile.put(end);
 }
+
 /*============ Слот для обработки timeout() (таймера) ==============*/
 void MainWindow::slotTimerAlarm(){
     secondsTimer++;
@@ -341,18 +347,21 @@ void MainWindow::slotTimerAlarm(){
     ui->Timerlabel->setText(("Время со старта: ") + second);
 }
 
-
-
 /*============ Функция для инициализации осей 3D графика ==============*/
 void MainWindow::InitSurface(){
     ui->SurfaceLayout->addWidget(containerSurface);
 }
 
-/*============ Функция для построения 3D графика ==============*/
-void MainWindow::BuldSurface(QString path , uint16_t CountIon){
-    modifierSurface->enableSqrtSinModel(path, CountIon);
+void MainWindow::Button3Dchart(bool GetData){
+    ui->GetDataForBuld3DChartButton->setEnabled(GetData);
+    if(AutoUpdate3Dchart == true){
+    AutoBuldTimer->start(SecondUpdate3D * 1000);
+    }
 }
 
+void MainWindow::BuldSurface(QString path, quint16 CountIon){
+   modifierSurface->EnableGraphSurface(path,  CountIon);
+}
 
 
 

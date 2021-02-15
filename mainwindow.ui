@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1279</width>
-    <height>749</height>
+    <height>783</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -138,7 +138,7 @@
                  </widget>
                 </item>
                 <item>
-                 <spacer name="verticalSpacer">
+                 <spacer name="verticalSpacer_3">
                   <property name="orientation">
                    <enum>Qt::Vertical</enum>
                   </property>
@@ -172,16 +172,16 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="LineBreakCheckBox">
+                 <widget class="QCheckBox" name="smoothiLineCheckBox">
                   <property name="text">
-                   <string>Перенос строки</string>
+                   <string>Сглаживание углов на графике</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="smoothiLineCheckBox">
+                 <widget class="QCheckBox" name="EnableChartcheckBox">
                   <property name="text">
-                   <string>Сглаживание углов на графике.</string>
+                   <string>Заблокировать изображение на графике</string>
                   </property>
                  </widget>
                 </item>
@@ -233,7 +233,7 @@
                      <enum>QAbstractSpinBox::DefaultStepType</enum>
                     </property>
                     <property name="value">
-                     <number>50</number>
+                     <number>500</number>
                     </property>
                    </widget>
                   </item>
@@ -277,156 +277,47 @@
            <enum>QLayout::SetMinAndMaxSize</enum>
           </property>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
+           <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_6">
-              <item>
-               <widget class="QPushButton" name="settingConnButton">
-                <property name="text">
-                 <string>Настройки подключения</string>
-                </property>
-                <property name="shortcut">
-                 <string>Ctrl+A</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="closeConButton">
-                <property name="text">
-                 <string>Разьединение</string>
-                </property>
-                <property name="shortcut">
-                 <string>Ctrl+S</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="UpdateConnectComButton">
-                <property name="text">
-                 <string>Переподключиться</string>
-                </property>
-                <property name="shortcut">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <item>
-               <widget class="QGroupBox" name="groupBox_2">
-                <property name="title">
-                 <string>Отправленые данные</string>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_2">
-                 <item row="0" column="0">
-                  <widget class="QScrollArea" name="scrollArea">
-                   <property name="widgetResizable">
-                    <bool>true</bool>
-                   </property>
-                   <widget class="QWidget" name="scrollAreaWidgetContents_3">
-                    <property name="geometry">
-                     <rect>
-                      <x>0</x>
-                      <y>0</y>
-                      <width>395</width>
-                      <height>478</height>
-                     </rect>
-                    </property>
-                    <layout class="QGridLayout" name="gridLayout_5">
-                     <item row="0" column="0">
-                      <widget class="QTextEdit" name="sendlabel">
-                       <property name="readOnly">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </widget>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QGroupBox" name="groupBox">
-                <property name="title">
-                 <string>Принятые данные</string>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_3">
-                 <item row="0" column="0">
-                  <widget class="QScrollArea" name="scrollArea_2">
-                   <property name="widgetResizable">
-                    <bool>true</bool>
-                   </property>
-                   <widget class="QWidget" name="scrollAreaWidgetContents_4">
-                    <property name="geometry">
-                     <rect>
-                      <x>0</x>
-                      <y>0</y>
-                      <width>395</width>
-                      <height>478</height>
-                     </rect>
-                    </property>
-                    <layout class="QGridLayout" name="gridLayout_6">
-                     <item row="0" column="0">
-                      <widget class="QTextEdit" name="labelExamSett">
-                       <property name="readOnly">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </widget>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_22">
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout">
-              <item>
-               <widget class="QLineEdit" name="sendlineEdit"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton">
-                <property name="text">
-                 <string>отправка</string>
-                </property>
-                <property name="shortcut">
-                 <string>Return</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QPushButton" name="clearButtn">
+             <widget class="QPushButton" name="settingConnButton">
               <property name="text">
-               <string>Очистить окна</string>
+               <string>Настройки подключения</string>
+              </property>
+              <property name="shortcut">
+               <string>Ctrl+A</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="closeConButton">
+              <property name="text">
+               <string>Разьединение</string>
+              </property>
+              <property name="shortcut">
+               <string>Ctrl+S</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="UpdateConnectComButton">
+              <property name="text">
+               <string>Переподключиться</string>
+              </property>
+              <property name="shortcut">
+               <string/>
               </property>
              </widget>
             </item>
            </layout>
           </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_4">
+            <item>
+             <layout class="QHBoxLayout" name="ChartVLayout"/>
+            </item>
+           </layout>
+          </item>
          </layout>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="Chart">
-       <attribute name="title">
-        <string>2D График</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="0">
-         <layout class="QGridLayout" name="ChartVLayout"/>
         </item>
        </layout>
       </widget>
@@ -435,22 +326,30 @@
         <string>3D график</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_7">
-        <item row="0" column="1">
-         <layout class="QVBoxLayout" name="SurfaceLayout"/>
+        <item row="4" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="GetDataForBuld3DChartButton">
+            <property name="text">
+             <string>Выбрать данные для построения </string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item row="1" column="1">
-         <widget class="QPushButton" name="Buld3DChartButton">
-          <property name="text">
-           <string>Построить по последним данным в этом сеансе</string>
-          </property>
-         </widget>
+         <layout class="QVBoxLayout" name="SurfaceLayout"/>
         </item>
-        <item row="2" column="1">
-         <widget class="QPushButton" name="GetDataForBuld3DChartButton">
-          <property name="text">
-           <string>Выбрать данные для построения </string>
-          </property>
-         </widget>
+        <item row="0" column="1">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QCheckBox" name="AutoUpdate3DchartCheckBox">
+            <property name="text">
+             <string>Автообновление </string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>

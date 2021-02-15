@@ -61,7 +61,7 @@ void SerialPort::RxBufV(uint8_t* buff, uint16_t len){
 void MywriteDataByte(uint8_t data){
     QByteArray qData;
     qData.append((char)data);
-    qDebug()<<qData;
+    //qDebug()<<qData;
     serialPort.MyWriteData(qData);
 }
 

@@ -13,6 +13,10 @@ class SerialSetting : public QDialog {
 
 public:
     explicit SerialSetting(QWidget *parent = 0);
+    void searchComPort();
+    void fillPortsParameters();
+    void updateSettings();
+
     struct Settings {
            QString name;
            qint32 baudRate;
@@ -27,16 +31,11 @@ public:
            QString stringFlowControl;
            bool localEchoEnabled;
        };
-
     Settings currentSettings;
 
-    void searchComPort();
-    void fillPortsParameters();
-    void updateSettings();
 /*============ Создаем сигнал для отправки ==============*/
 signals:
     void sendText(SerialSetting::Settings);  // Функция которой не нужен прототип, достаточно только название и тип передаваемого параметра
-
 
 public slots:
     void on_redreshButton_clicked();
